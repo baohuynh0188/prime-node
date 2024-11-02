@@ -1,0 +1,24 @@
+{
+    "name": "prime-node",
+    "version": "1.0.0",
+    "description": "The primary backend system",
+    "main": "index.js",
+    "scripts": {
+        "build": "tsc",
+        "dev": "ts-node-dev --respawn --transpile-only src/app.ts",
+        "start": "node dist/app.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "author": "baohuynh",
+    "license": "ISC",
+    "devDependencies": {
+        "@types/express": "^5.0.0",
+        "@types/node": "^22.8.6",
+        "ts-node-dev": "^2.0.0",
+        "typescript": "^5.6.3"
+    },
+    "dependencies": {
+        "dotenv": "^16.4.5",
+        "express": "^4.21.1"
+    }
+}

@@ -9,7 +9,7 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
 
-import { Todo } from '../models/todo';
+import { Todo } from '../models/todo-model';
 import handleResponse from '../utils/handleResponse';
 import dynamodbClient from '../configs/dynamodbClient';
 import httpStatusCode from '../constants/httpStatusCodes';
@@ -25,6 +25,10 @@ const todoSchema = Joi.object({
     description: Joi.string().max(1024).required(),
     cardColor: Joi.string().max(7).optional(),
     isCompleted: Joi.boolean().optional(),
+});
+
+const todoUpdateSchema = Joi.object({
+    isCompleted: Joi.boolean().required(),
 });
 
 // List all to-do items
@@ -56,7 +60,7 @@ export const listTodos = async (req: Request, res: Response) => {
 
 // Get a to-do item by ID
 export const getTodo = async (req: Request, res: Response) => {
-    const id: string = req.body.id;
+    const id: string = req.params.id;
 
     const command = new GetCommand({
         TableName: TABLE_NAME,
@@ -65,14 +69,14 @@ export const getTodo = async (req: Request, res: Response) => {
 
     try {
         const response = await docClient.send(command);
-        console.log('get one response ', response);
-        if (!response) {
-            handleResponse(
+        logger.info('Get to-do item by ID', { response });
+
+        if (!response.Item) {
+            return handleResponse(
                 res,
                 httpStatusCode.NOT_FOUND,
-                'Success',
-                `No Todo found with ID: ${id}`,
-                response
+                'Error',
+                `No Todo found with ID: ${id}`
             );
         }
         handleResponse(
@@ -130,43 +134,77 @@ export const createTodo = async (req: Request, res: Response) => {
 
     try {
         await docClient.send(command);
-        res.status(201).json({
-            status: 'Success',
-            message: 'Todo has been created successfully!',
-            todo: newTodo,
-        });
+        handleResponse(
+            res,
+            httpStatusCode.CREATED,
+            'Success',
+            'Todo has been created successfully!',
+            newTodo
+        );
     } catch (error) {
-        res.status(500).json({
-            status: 'Error',
-            message: 'Error in DB Operation!',
-            error: error,
-        });
+        handleResponse(
+            res,
+            httpStatusCode.INTERNAL_SERVER_ERROR,
+            'Error',
+            'Error in DB Operation!',
+            error
+        );
     }
 };
 
 // Update a to-do item
 export const updateTodo = async (req: Request, res: Response) => {
-    const id: string = req.body.id;
-    const completed: boolean = req.body.completed;
+    const id: string = req.params.id;
+    // Validate the request body
+    const { error } = todoUpdateSchema.validate(req.body);
 
-    const command = new UpdateCommand({
+    if (error) {
+        logger.error('Validation error', { error: error.details });
+        return handleResponse(
+            res,
+            httpStatusCode.BAD_REQUEST,
+            'Error',
+            'Validation error',
+            error.details
+        );
+    }
+
+    // Check if the item exists
+    const getCommand = new GetCommand({
         TableName: TABLE_NAME,
         Key: { id },
-        UpdateExpression: 'set completed = :completed',
-        ExpressionAttributeValues: {
-            ':completed': completed,
-        },
-        ReturnValues: 'ALL_NEW',
     });
 
     try {
-        const response = await docClient.send(command);
+        const response = await docClient.send(getCommand);
+        if (!response.Item) {
+            return handleResponse(
+                res,
+                httpStatusCode.NOT_FOUND,
+                'Error',
+                `No Todo found with ID: ${id}`
+            );
+        }
+
+        const { isCompleted } = req.body;
+
+        const updateCommand = new UpdateCommand({
+            TableName: TABLE_NAME,
+            Key: { id },
+            UpdateExpression: 'set isCompleted = :isCompleted',
+            ExpressionAttributeValues: {
+                ':isCompleted': isCompleted,
+            },
+            ReturnValues: 'ALL_NEW',
+        });
+
+        const updateResponse = await docClient.send(updateCommand);
         handleResponse(
             res,
             httpStatusCode.OK,
             'Success',
             `Todo ID: ${id} has been updated successfully!`,
-            response
+            updateResponse
         );
     } catch (error) {
         handleResponse(
@@ -184,15 +222,30 @@ export const deleteTodo = async (
     req: Request,
     res: Response
 ): Promise<void> => {
-    const id: string = req.body.id;
+    const id: string = req.params.id;
 
-    const command = new DeleteCommand({
+    const getCommand = new GetCommand({
         TableName: TABLE_NAME,
         Key: { id },
     });
 
     try {
-        await docClient.send(command);
+        const response = await docClient.send(getCommand);
+        if (!response.Item) {
+            return handleResponse(
+                res,
+                httpStatusCode.NOT_FOUND,
+                'Error',
+                `No Todo found with ID: ${id}`
+            );
+        }
+
+        const deleteCommand = new DeleteCommand({
+            TableName: TABLE_NAME,
+            Key: { id },
+        });
+
+        await docClient.send(deleteCommand);
         handleResponse(
             res,
             httpStatusCode.NO_CONTENT,

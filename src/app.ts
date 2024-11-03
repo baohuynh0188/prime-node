@@ -2,8 +2,8 @@ import express, { Request, Response, NextFunction } from 'express';
 import bodyParser from 'body-parser';
 import expressWinston from 'express-winston';
 
-import feedRouter from './routers/feed';
-import todoRouter from './routers/todo';
+import feedRouter from './routers/feed-router';
+import todoRouter from './routers/todo-router';
 import logger from './utils/logger';
 import handleResponse from './utils/handleResponse';
 import httpStatusCode from './constants/httpStatusCodes';

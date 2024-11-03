@@ -1,0 +1,26 @@
+# Ignore node modules and other dependencies
+.gitignore
+.prettierignore
+.prettierrc
+node_modules
+npm-debug.log
+
+# Ignore build and cache artifacts
+dist/
+build/
+.cache/
+
+# Ignore environment files
+.env
+.env.local
+.env.*.local
+
+# Ignore logs and temporary files
+logs
+*.log
+tmp
+*.tmp
+
+# Ignore Docker-related files
+Dockerfile
+.dockerignore

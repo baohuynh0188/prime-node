@@ -2,6 +2,7 @@
 .gitignore
 .prettierignore
 .prettierrc
+coverage
 node_modules
 npm-debug.log
 
@@ -24,3 +25,6 @@ tmp
 # Ignore Docker-related files
 Dockerfile
 .dockerignore
+
+# Ignore github action workflows
+.github/
